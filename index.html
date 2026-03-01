@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Polar Curves Reference</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&family=Lato:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c0c14;
+    --card: #13131f;
+    --border: #2a2a40;
+    --accent: #e8c547;
+    --accent2: #7c6fcd;
+    --accent3: #4ecdc4;
+    --text: #e8e6f0;
+    --muted: #7a788a;
+    --curve-color: #e8c547;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Lato', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    padding: 2rem;
+  }
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 400;
+    text-align: center;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.3rem;
+    background: linear-gradient(135deg, #e8c547, #f0a0c0, #7c6fcd);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .subtitle {
+    text-align: center;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 3rem;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 1.5rem;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: border-color 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .card:hover { border-color: var(--accent2); }
+  .card:hover::before { opacity: 1; }
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+  }
+  .curve-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+    font-style: italic;
+    color: var(--text);
+  }
+  .curve-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    background: rgba(124,111,205,0.2);
+    color: var(--accent2);
+    border: 1px solid rgba(124,111,205,0.3);
+    border-radius: 4px;
+    padding: 2px 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .formula {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.95rem;
+    color: var(--accent);
+    background: rgba(232,197,71,0.08);
+    border: 1px solid rgba(232,197,71,0.2);
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 1rem;
+    letter-spacing: 0.03em;
+  }
+  canvas {
+    display: block;
+    margin: 0 auto 1rem;
+    border-radius: 8px;
+    background: #090910;
+    border: 1px solid var(--border);
+  }
+  .sliders { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 0.75rem; }
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .slider-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--accent);
+    width: 16px;
+    flex-shrink: 0;
+  }
+  input[type=range] {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.3); }
+  .slider-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    width: 32px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .description {
+    font-size: 0.82rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+  .description strong { color: var(--text); font-weight: 400; }
+  @media (max-width: 600px) { body { padding: 1rem; } .grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<h1>Polar Curves</h1>
+<p class="subtitle">Interactive reference · r = f(θ) · adjust parameters with sliders</p>
+<div class="grid" id="grid"></div>
+
+<script>
+const SIZE = 200;
+const curves = [
+  {
+    name: "Circle",
+    tag: "basic",
+    formula: "r = a",
+    params: { a: { min: 0.5, max: 3, step: 0.1, def: 2 } },
+    fn: (t, {a}) => a,
+    desc: "<strong>a</strong> controls the <strong>radius</strong>. Larger a → bigger circle. The curve passes through (a,0), (0,a) etc. in Cartesian: x²+y² = a²."
+  },
+  {
+    name: "Cardioid",
+    tag: "limaçon",
+    formula: "r = a(1 + cos θ)",
+    params: { a: { min: 0.5, max: 2.5, step: 0.1, def: 1.5 } },
+    fn: (t, {a}) => a * (1 + Math.cos(t)),
+    desc: "<strong>a</strong> scales the whole curve. The cardioid has a cusp at the origin and width <strong>4a</strong>. It's a limaçon where b = a."
+  },
+  {
+    name: "Limaçon",
+    tag: "limaçon",
+    formula: "r = a + b·cos θ",
+    params: {
+      a: { min: 0.2, max: 2.5, step: 0.1, def: 1.5 },
+      b: { min: 0.2, max: 2.5, step: 0.1, def: 1 }
+    },
+    fn: (t, {a, b}) => a + b * Math.cos(t),
+    desc: "When <strong>b < a</strong>: dimpled or convex loop-free limaçon. When <strong>b = a</strong>: cardioid. When <strong>b > a</strong>: inner loop appears. The ratio b/a determines the shape."
+  },
+  {
+    name: "Rose (Petals)",
+    tag: "rose",
+    formula: "r = a·cos(n·θ)",
+    params: {
+      a: { min: 0.5, max: 2.5, step: 0.1, def: 2 },
+      n: { min: 1, max: 8, step: 1, def: 3 }
+    },
+    fn: (t, {a, n}) => a * Math.cos(n * t),
+    desc: "<strong>a</strong> = petal length. <strong>n</strong> = number of petals if n is odd, or 2n petals if n is even. E.g. n=3 → 3 petals, n=4 → 8 petals."
+  },
+  {
+    name: "Rose (sin)",
+    tag: "rose",
+    formula: "r = a·sin(n·θ)",
+    params: {
+      a: { min: 0.5, max: 2.5, step: 0.1, def: 2 },
+      n: { min: 1, max: 8, step: 1, def: 4 }
+    },
+    fn: (t, {a, n}) => a * Math.sin(n * t),
+    desc: "Same petal rules as cos version but <strong>rotated 90°/n</strong>. With sin, petals sit symmetrically about the y-axis when n is odd."
+  },
+  {
+    name: "Lemniscate",
+    tag: "special",
+    formula: "r² = a²·cos(2θ)",
+    params: { a: { min: 0.5, max: 2.5, step: 0.1, def: 2 } },
+    fn: (t, {a}) => { const v = a*a*Math.cos(2*t); return v >= 0 ? Math.sqrt(v) : null; },
+    desc: "<strong>a</strong> controls the total width (max extent = a). The figure-8 / infinity-symbol shape. Only exists where cos(2θ) ≥ 0. Cartesian: (x²+y²)² = a²(x²−y²)."
+  },
+  {
+    name: "Archimedean Spiral",
+    tag: "spiral",
+    formula: "r = a + b·θ",
+    params: {
+      a: { min: 0, max: 1, step: 0.1, def: 0 },
+      b: { min: 0.05, max: 0.6, step: 0.05, def: 0.2 }
+    },
+    fn: (t, {a, b}) => a + b * t,
+    tRange: [0, 6 * Math.PI],
+    desc: "<strong>a</strong> = starting radius offset. <strong>b</strong> = spacing between successive arms — larger b → wider gaps. The spiral turns outward linearly with θ."
+  },
+  {
+    name: "Logarithmic Spiral",
+    tag: "spiral",
+    formula: "r = a·e^(b·θ)",
+    params: {
+      a: { min: 0.05, max: 0.5, step: 0.05, def: 0.1 },
+      b: { min: 0.05, max: 0.4, step: 0.01, def: 0.15 }
+    },
+    fn: (t, {a, b}) => a * Math.exp(b * t),
+    tRange: [0, 4 * Math.PI],
+    desc: "<strong>a</strong> = scale (starting size). <strong>b</strong> = growth rate. Larger b → faster outward expansion. This spiral appears in nature (shells, galaxies). Each arm is self-similar."
+  },
+  {
+    name: "Conic Section",
+    tag: "conic",
+    formula: "r = ed/(1 + e·cos θ)",
+    params: {
+      e: { min: 0.1, max: 2.5, step: 0.05, def: 0.5 },
+      d: { min: 0.5, max: 4, step: 0.1, def: 2 }
+    },
+    fn: (t, {e, d}) => { const r = e*d/(1 + e*Math.cos(t)); return r > 0 && r < 20 ? r : null; },
+    desc: "<strong>e</strong> = eccentricity: e < 1 → ellipse, e = 1 → parabola, e > 1 → hyperbola. <strong>d</strong> = focal distance, scales the conic. Focus is at the origin."
+  },
+  {
+    name: "Strophoid (Folium)",
+    tag: "special",
+    formula: "r = cos(2θ)/cos θ",
+    params: { a: { min: 0.5, max: 2.5, step: 0.1, def: 1.5 } },
+    fn: (t, {a}) => { const c = Math.cos(t); return Math.abs(c) > 0.05 ? a * Math.cos(2*t)/c : null; },
+    desc: "<strong>a</strong> scales the curve. This 4-petaled cross-like shape has lobes along each axis. Related to the quadrifolium family. Defined only where cos θ ≠ 0."
+  },
+  {
+    name: "Bifolium",
+    tag: "special",
+    formula: "r = a·sin θ·cos²θ",
+    params: { a: { min: 0.5, max: 3, step: 0.1, def: 2.5 } },
+    fn: (t, {a}) => a * Math.sin(t) * Math.cos(t) * Math.cos(t),
+    desc: "<strong>a</strong> scales both lobes. The curve has two unequal loops, one above and one below the x-axis (the lower loop is smaller). Max extent ≈ 4a/3√3."
+  },
+  {
+    name: "Cissoid",
+    tag: "special",
+    formula: "r = 2a·sin θ·tan θ",
+    params: { a: { min: 0.3, max: 1.2, step: 0.05, def: 0.7 } },
+    fn: (t, {a}) => { const c = Math.cos(t); return Math.abs(c) > 0.05 ? 2*a*Math.sin(t)*Math.sin(t)/c : null; },
+    desc: "<strong>a</strong> controls the width. Has a cusp at the origin and an asymptote at x = 2a. Used historically to double the cube. Only the right half lobe is real."
+  }
+];
+
+function drawCurve(canvas, curve, paramVals) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#090910';
+  ctx.fillRect(0, 0, W, H);
+
+  const cx = W/2, cy = H/2;
+  const scale = W * 0.35;
+  
+  // Grid
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 1;
+  [1, 2, 3].forEach(r => {
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * scale / 3, 0, Math.PI * 2);
+    ctx.stroke();
+  });
+  ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, H); ctx.stroke();
+
+  const [tMin, tMax] = curve.tRange || [0, 2 * Math.PI];
+  const steps = 1000;
+
+  ctx.beginPath();
+  ctx.strokeStyle = '#e8c547';
+  ctx.lineWidth = 2;
+  ctx.shadowBlur = 8;
+  ctx.shadowColor = 'rgba(232,197,71,0.5)';
+
+  let first = true;
+  let prevNull = false;
+  for (let i = 0; i <= steps; i++) {
+    const t = tMin + (tMax - tMin) * i / steps;
+    const r = curve.fn(t, paramVals);
+    if (r === null || r === undefined || !isFinite(r)) {
+      prevNull = true; first = true; continue;
+    }
+    const x = cx + r * Math.cos(t) * scale;
+    const y = cy - r * Math.sin(t) * scale;
+    if (first || prevNull) { ctx.moveTo(x, y); first = false; prevNull = false; }
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+}
+
+const grid = document.getElementById('grid');
+
+curves.forEach(curve => {
+  const card = document.createElement('div');
+  card.className = 'card';
+
+  const paramVals = {};
+  Object.entries(curve.params).forEach(([k, v]) => paramVals[k] = v.def);
+
+  card.innerHTML = `
+    <div class="card-header">
+      <div class="curve-name">${curve.name}</div>
+      <div class="curve-tag">${curve.tag}</div>
+    </div>
+    <div class="formula">${curve.formula}</div>
+    <canvas width="${SIZE}" height="${SIZE}"></canvas>
+    <div class="sliders"></div>
+    <div class="description">${curve.desc}</div>
+  `;
+
+  const canvas = card.querySelector('canvas');
+  const slidersDiv = card.querySelector('.sliders');
+
+  Object.entries(curve.params).forEach(([key, p]) => {
+    const row = document.createElement('div');
+    row.className = 'slider-row';
+    const valSpan = document.createElement('span');
+    valSpan.className = 'slider-val';
+    valSpan.textContent = p.def;
+    row.innerHTML = `<span class="slider-label">${key}</span>`;
+    const input = document.createElement('input');
+    input.type = 'range';
+    input.min = p.min; input.max = p.max; input.step = p.step; input.value = p.def;
+    input.addEventListener('input', () => {
+      paramVals[key] = parseFloat(input.value);
+      valSpan.textContent = parseFloat(input.value).toFixed(2);
+      drawCurve(canvas, curve, paramVals);
+    });
+    row.appendChild(input);
+    row.appendChild(valSpan);
+    slidersDiv.appendChild(row);
+  });
+
+  grid.appendChild(card);
+  drawCurve(canvas, curve, paramVals);
+});
+</script>
+</body>
+</html>
